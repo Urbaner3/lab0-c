@@ -139,7 +139,7 @@ bool q_delete_mid(struct list_head *head)
 void q_view(struct list_head *head)
 {
     element_t *now;
-    now = head->next; /* Cppcheck init error */
+    now = list_entry(head->next, element_t, list); /* Cppcheck init error */
     list_for_each_entry (now, head, list) {
         printf("%s ", now->value);
         if (now->list.next == head)
@@ -179,16 +179,45 @@ bool q_delete_dup(struct list_head *head)
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
-    // https://leetcode.com/problems/swap-nodes-in-pairs/
+    /* https://leetcode.com/problems/swap-nodes-in-pairs/ */
+    q_reverseK(head, 2);
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (!head)
+        return;
+
+    struct list_head *it, *safe;
+    /* Iterate the list and move each item to the head */
+    list_for_each_safe (it, safe, head)
+        list_move(it, head);
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
-    // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    /* https://leetcode.com/problems/reverse-nodes-in-k-group/ */
+    if (!head || list_empty(head))
+        return;
+    struct list_head *node, *safe, *tmp, *cut = head;
+    int cnt_len = q_size(head), count = k;
+    list_for_each_safe (node, safe, head) {
+        if (count) {
+            tmp = node->next;
+            list_move(node, cut);
+            /* count on moves */
+            count--;
+            cnt_len--;
+            if (count == 0) {
+                count = k;
+                cut = tmp->prev;
+                if (cnt_len < k)
+                    break;
+            }
+        }
+    }
 }
 
 static void merge_two(struct list_head *l1, struct list_head *l2, bool descend);
