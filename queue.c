@@ -247,10 +247,8 @@ void q_sort(struct list_head *head, bool descend)
     q_sort(head, descend);
     q_sort(&second, descend);
 
-    q_view(head), puts(""), q_view(&second);
     /* Merge */
     merge_two(head, &second, descend);
-    q_view(head);
 }
 
 /* Remove every node which has a node with a strictly less value anywhere to
