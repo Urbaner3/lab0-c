@@ -180,34 +180,45 @@ bool q_delete_dup(struct list_head *head)
 void q_swap(struct list_head *head)
 {
     /* https://leetcode.com/problems/swap-nodes-in-pairs/ */
+    q_reverseK(head, 2);
 }
 
 
 /* Reverse elements in queue */
 void q_reverse(struct list_head *head)
 {
-    struct list_head *node, *back;
-    element_t *now, *far;
-    char *tmp;
-    back = head->prev;
-    list_for_each (node, head) {
-        if (node == back)
-            break;
-        now = list_entry(node, element_t, list);
-        far = list_entry(back, element_t, list);
-        tmp = now->value;
-        now->value = far->value;
-        far->value = tmp;
-        if (node->next == back)
-            break;
-        back = back->prev;
-    }
+    if (!head)
+        return;
+
+    struct list_head *it, *safe;
+    /* Iterate the list and move each item to the head */
+    list_for_each_safe (it, safe, head)
+        list_move(it, head);
 }
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
-    // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    /* https://leetcode.com/problems/reverse-nodes-in-k-group/ */
+    if (!head || list_empty(head))
+        return;
+    struct list_head *node, *safe, *tmp, *cut = head;
+    int cnt_len = q_size(head), count = k;
+    list_for_each_safe (node, safe, head) {
+        if (count) {
+            tmp = node->next;
+            list_move(node, cut);
+            /* count on moves */
+            count--;
+            cnt_len--;
+            if (count == 0) {
+                count = k;
+                cut = tmp->prev;
+                if (cnt_len < k)
+                    break;
+            }
+        }
+    }
 }
 
 static void merge_two(struct list_head *l1, struct list_head *l2, bool descend);
@@ -246,14 +257,51 @@ void q_sort(struct list_head *head, bool descend)
 int q_ascend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+
+    int cnt = 1;
+    element_t *cur = list_last_entry(head, element_t, list);
+    while (cur->list.prev != head) {
+        element_t *prev = list_last_entry(&cur->list, element_t, list);
+        if (strcmp(prev->value, cur->value) > 0) {
+            list_del(&prev->list);
+            q_release_element(prev);
+        } else {
+            cnt++;
+            cur = prev;
+        }
+    }
+
+    return cnt;
 }
 
 
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+
+    /**
+     * Traverse from the last entry and remove the element that is
+     * smaller or equal to its right. Also count the number of elements.
+     */
+    int cnt = 1;
+
+    element_t *cur = list_last_entry(head, element_t, list);
+    while (cur->list.prev != head) {
+        element_t *prev = list_last_entry(&cur->list, element_t, list);
+        if (strcmp(prev->value, cur->value) < 0) {
+            list_del(&prev->list);
+            q_release_element(prev);
+        } else {
+            cnt++;
+            cur = prev;
+        }
+    }
+
+    return cnt;
 }
 
 
@@ -289,5 +337,22 @@ static void merge_two(struct list_head *l1, struct list_head *l2, bool descend)
 int q_merge(struct list_head *head, bool descend)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+    queue_contex_t *fir_qc = list_first_entry(head, queue_contex_t, chain);
+    int cnt_len = q_size(fir_qc->q);
+    if (list_is_singular(head))
+        return cnt_len = 0;
+    queue_contex_t *sec_qc =
+        list_entry(fir_qc->chain.next, queue_contex_t, chain);
+    queue_contex_t *end = NULL;
+    while (sec_qc != end) {
+        cnt_len += q_size(sec_qc->q);
+        merge_two(fir_qc->q, sec_qc->q, descend);
+        if (!end)
+            end = sec_qc;
+        list_move_tail(&sec_qc->chain, head);
+        sec_qc = list_entry(fir_qc->chain.next, queue_contex_t, chain);
+    }
+    return cnt_len;
 }
