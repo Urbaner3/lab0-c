@@ -139,7 +139,7 @@ bool q_delete_mid(struct list_head *head)
 void q_view(struct list_head *head)
 {
     element_t *now;
-    now = head->next; /* Cppcheck init error */
+    now = list_entry(head->next, element_t, list); /* Cppcheck init error */
     list_for_each_entry (now, head, list) {
         printf("%s ", now->value);
         if (now->list.next == head)
@@ -179,11 +179,30 @@ bool q_delete_dup(struct list_head *head)
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
-    // https://leetcode.com/problems/swap-nodes-in-pairs/
+    /* https://leetcode.com/problems/swap-nodes-in-pairs/ */
 }
 
+
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    struct list_head *node, *back;
+    element_t *now, *far;
+    char *tmp;
+    back = head->prev;
+    list_for_each (node, head) {
+        if (node == back)
+            break;
+        now = list_entry(node, element_t, list);
+        far = list_entry(back, element_t, list);
+        tmp = now->value;
+        now->value = far->value;
+        far->value = tmp;
+        if (node->next == back)
+            break;
+        back = back->prev;
+    }
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
@@ -218,10 +237,8 @@ void q_sort(struct list_head *head, bool descend)
     q_sort(head, descend);
     q_sort(&second, descend);
 
-    q_view(head), puts(""), q_view(&second);
     /* Merge */
     merge_two(head, &second, descend);
-    q_view(head);
 }
 
 /* Remove every node which has a node with a strictly less value anywhere to
