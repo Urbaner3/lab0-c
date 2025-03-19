@@ -4,7 +4,7 @@
 
 #include "queue.h"
 
-/* Create an empty queue */
+/* Create an empty queue  */
 struct list_head *q_new()
 {
     return NULL;
