@@ -5,6 +5,15 @@
 #include "harness.h"
 #include "queue.h"
 
+#ifndef strlcpy
+#define strlcpy(dst, src, sz) snprintf((dst), (sz), "%s", (src))
+#endif
+
+/* Notice: sometimes, Cppcheck would find the potential NULL pointer bugs,
+ * but some of them cannot occur. You can suppress them by adding the
+ * following line.
+ *   cppcheck-suppress nullPointer
+ */
 /* Create an empty queue  */
 struct list_head *q_new()
 {
@@ -25,9 +34,12 @@ void q_free(struct list_head *head)
     element_t *go_node, *go_next;
     /* go_node */
     list_for_each_entry_safe(go_node, go_next, head, list) {
+        list_del(&(go_node->list));
         q_release_element(go_node);
     }
+    list_del_init(head);
     free(head);
+    return;
 }
 
 /*
@@ -36,72 +48,79 @@ void q_free(struct list_head *head)
  * Return null if allocation failed.
  * Assert malloc and value to node
  */
-element_t *part_ins(char *s)
+element_t *create_new_element(char *s)
 {
     element_t *new_ele = malloc(sizeof(element_t));
-    if (new_ele) {
-        new_ele->value = strdup(s);
-        if (!new_ele->value) {
-            free(new_ele);
-            return NULL;
-        } else
-            return new_ele;
-    } else
+    if (!new_ele)
         return NULL;
+
+    new_ele->value = malloc(sizeof(char) * (strlen(s) + 1));
+
+    if (!new_ele->value) {
+        free(new_ele);
+        return NULL;
+    }
+
+    strlcpy(new_ele->value, s, strlen(s) + 1);
+    return new_ele;
 }
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
-    if (head == NULL)
+    if (!head)
         return false;
-    else {
-        element_t *new_ele = part_ins(s);
-        if (new_ele == NULL)
-            return false;
-        else {
-            list_add(&new_ele->list, head);
-        }
-        return true;
-    }
+    element_t *new_ele = create_new_element(s);
+
+    if (!new_ele)
+        return false;
+    list_add(&new_ele->list, head);
+
+    return true;
 }
 
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
-    if (head == NULL)
+    if (!head)
         return false;
-    else {
-        element_t *new_ele = part_ins(s);
-        if (new_ele == NULL)
-            return false;
-        else {
-            list_add_tail(&new_ele->list, head);
-        }
-        return true;
-    }
+
+    element_t *new_ele = create_new_element(s);
+    if (!new_ele)
+        return false;
+    list_add_tail(&new_ele->list, head);
+
+    return true;
 }
+
 
 
 /* Remove an element from head of queue */
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
-    if (list_empty(head) != 0)
+    if (!head || list_empty(head))
         return NULL;
     // else if (list_empty(head) == 0)
     // puts("queue not empty");
-    element_t *n = list_first_entry(head, element_t, list);
-    list_del(head->next);
-    if (sp != NULL) {
-        strncpy(sp, n->value, bufsize - 1);
-        sp[bufsize - 1] = '\0';
+    element_t *node = list_first_entry(head, element_t, list);
+    // remove_element
+    list_del_init(head->next);
+    if (sp) {
+        // cut the word if too long
+        size_t len;
+        if (strlen(node->value) < bufsize - 1)
+            len = strlen(node->value);
+        else
+            len = bufsize - 1;
+        memcpy(sp, node->value, len);
+        sp[len] = '\0';
     }
-    return n;
+    return node;
 }
 
 /* Remove an element from tail of queue */
 element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
-    if (!head || !head->prev)
+    if (!head || list_empty(head))
         return NULL;
     return q_remove_head(head->prev->prev, sp, bufsize);
 }
@@ -138,15 +157,45 @@ bool q_delete_dup(struct list_head *head)
 void q_swap(struct list_head *head)
 {
     // https://leetcode.com/problems/swap-nodes-in-pairs/
+    q_reverseK(head, 2);
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (!head || list_empty(head))
+        return;
+
+    struct list_head *curr, *safe;
+    list_for_each_safe(curr, safe, head)
+        list_move(curr, head);
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    if (!head || list_empty(head) || k == 1)
+        return;
+    if (k == q_size(head))
+        q_reverse(head);
+    struct list_head *curr = head->next, *safe, *dummy = head;
+    int count = k;
+    int group_count = q_size(head) / k;
+    while (curr != dummy) {
+        while (count > 0) {
+            safe = curr->next;
+            list_move(curr, dummy);
+            curr = safe;
+            count--;
+        }
+        group_count--;
+        if (group_count == 0)
+            break;
+        dummy = curr->prev;
+        curr = curr->next;
+        count = k - 1;
+    }
 }
 
 /* Sort elements of queue in ascending/descending order */
