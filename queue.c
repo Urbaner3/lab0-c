@@ -3,11 +3,21 @@
 #include <string.h>
 
 #include "harness.h"
+#include "list_sort.h"
 #include "queue.h"
 
 #ifndef strlcpy
 #define strlcpy(dst, src, sz) snprintf((dst), (sz), "%s", (src))
 #endif
+
+/* Compare two elements based on their string values. */
+int cmp(const struct list_head *a, const struct list_head *b)
+{
+    const element_t *ela = list_entry(a, element_t, list);
+    const element_t *elb = list_entry(b, element_t, list);
+
+    return strcmp(ela->value, elb->value);
+}
 
 /* Notice: sometimes, Cppcheck would find the potential NULL pointer bugs,
  * but some of them cannot occur. You can suppress them by adding the
@@ -199,7 +209,12 @@ void q_reverseK(struct list_head *head, int k)
 }
 
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    list_sort(head, cmp);
+    if (descend)
+        q_reverse(head);
+}
 
 /* Remove every node which has a node with a strictly less value
  * anywhere to the right side of it */

@@ -42,7 +42,8 @@ $(GIT_HOOKS):
 OBJS := qtest.o report.o console.o harness.o queue.o \
         random.o dudect/constant.o dudect/fixture.o dudect/ttest.o \
         shannon_entropy.o \
-        linenoise.o web.o
+        linenoise.o web.o \
+			list_sort.o
 
 deps := $(OBJS:%.o=.%.o.d)
 
@@ -83,7 +84,7 @@ valgrind: valgrind_existence
 	sed -i "s/alarm/isnan/g" $(patched_file)
 	scripts/driver.py -p $(patched_file) --valgrind $(TCASE)
 	@echo
-	@echo "Test with specific case by running command:" 
+	@echo "Test with specific case by running command:"
 	@echo "scripts/driver.py -p $(patched_file) --valgrind -t <tid>"
 
 clean:
